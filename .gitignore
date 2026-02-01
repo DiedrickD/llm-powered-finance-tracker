@@ -1,0 +1,14 @@
+# Go build files
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Output folders
+/bin/
+/obj/
+/vendor/
