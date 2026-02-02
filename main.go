@@ -7,6 +7,7 @@ import (
 
 	"github.com/DiedrickD/llm-powered-finance-tracker/controllers"
 	initializers "github.com/DiedrickD/llm-powered-finance-tracker/initializers"
+	"github.com/DiedrickD/llm-powered-finance-tracker/middleware"
 )
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
@@ -41,6 +42,7 @@ func main() {
 	mux.HandleFunc("/health", healthHandler)
 	mux.HandleFunc("/signup", controllers.Signup)
 	mux.HandleFunc("/login", controllers.Login)
+	mux.HandleFunc("/validate", middleware.RequireAuth(controllers.Validate))
 
 	server := &http.Server{
 		Addr:           ":3000",
