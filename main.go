@@ -40,6 +40,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", healthHandler)
 	mux.HandleFunc("/signup", controllers.Signup)
+	mux.HandleFunc("/login", controllers.Login)
 
 	server := &http.Server{
 		Addr:           ":3000",
