@@ -1,7 +1,10 @@
 package main
 
-import "fmt"
+import (
+	initializers "github.com/DiedrickD/llm-powered-finance-tracker/initializers"
+)
 
 func main() {
-    fmt.Println("Just initialize")
+	initializers.LoadEnvVariables()
+	initializers.ConnectToDB()
 }
