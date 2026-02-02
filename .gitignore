@@ -16,3 +16,7 @@
 /bin/
 /obj/
 /vendor/
+
+.env
+.env.*
+    
