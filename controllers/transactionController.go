@@ -24,8 +24,9 @@ func CreateTransaction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var body struct {
-		Amount   int    `json:"amount"`
-		Category string `json:"category"`
+		Amount      int    `json:"amount"`
+		Category    string `json:"category"`
+		Description string `json:"description"`
 	}
 
 	err := json.NewDecoder(r.Body).Decode(&body)
@@ -42,9 +43,10 @@ func CreateTransaction(w http.ResponseWriter, r *http.Request) {
 
 	// Create transaction
 	transaction := models.Transaction{
-		Amount:   body.Amount,
-		Category: body.Category,
-		UserID:   user.ID,
+		Amount:      body.Amount,
+		Category:    body.Category,
+		UserID:      user.ID,
+		Description: body.Description,
 	}
 
 	// Put transaction into database
@@ -93,7 +95,7 @@ func ReadTransaction(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(transactions)
 }
 
-// Usage: https/link/updateTransaction? id=1 & amount=10000 & category=""
+// Usage: https/link/updateTransaction
 func UpdateTransaction(w http.ResponseWriter, r *http.Request) {
 	// Check for method
 	if r.Method != http.MethodPost {
@@ -108,45 +110,40 @@ func UpdateTransaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get parameter, id is required, all other is optional
-	q := r.URL.Query()
-
-	// Convert parameter id to uint
-	idInt, err := strconv.Atoi(q.Get("id"))
-	if err != nil {
-		http.Error(w, "ID must be a number", http.StatusBadRequest)
-		return
+	var body struct {
+		TransactionID int     `json:"transaction_id"`
+		Amount        *int    `json:"amount"`
+		Category      *string `json:"category"`
+		Description   *string `json:"description"`
 	}
 
-	idUint := uint(idInt)
+	err := json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		http.Error(w, "Invalid Request Body", http.StatusBadRequest)
+		return
+	}
 
 	// Create placeholder for existing transaction
 	var existingTransaction models.Transaction
 
-	result := initializers.DB.Where("id = ? AND user_id = ?", idUint, user.ID).First(&existingTransaction)
+	result := initializers.DB.Where("id = ? AND user_id = ?", uint(body.TransactionID), user.ID).First(&existingTransaction)
 
 	if result.Error != nil {
 		http.Error(w, "Transaction not found", http.StatusNotFound)
 		return
 	}
 
-	// Get amount from query and check it
-	amountStr := q.Get("amount")
-
-	if amountStr != "" {
-		amountInt, err := strconv.Atoi(amountStr)
-		if err != nil {
-			http.Error(w, "Amount format is wrong", http.StatusBadRequest)
-			return
-		}
-		existingTransaction.Amount = amountInt
+	// Update value 
+	if body.Amount != nil {
+    	existingTransaction.Amount = *body.Amount
 	}
 
-	// Get category from query and check it
-	categoryStr := q.Get("category")
+	if body.Category != nil {
+    	existingTransaction.Category = *body.Category
+	}
 
-	if categoryStr != "" {
-		existingTransaction.Category = categoryStr
+	if body.Description != nil {
+    	existingTransaction.Description = *body.Description
 	}
 
 	// Save updated data to database
@@ -185,7 +182,7 @@ func DeleteTransaction(w http.ResponseWriter, r *http.Request) {
 	user, ok := r.Context().Value("user").(models.User)
 	if !ok {
 		http.Error(w, "Unathorized", http.StatusUnauthorized)
-		return 
+		return
 	}
 
 	var transaction models.Transaction

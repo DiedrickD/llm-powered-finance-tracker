@@ -14,7 +14,8 @@ type Category struct {
 
 type Transaction struct {
 	gorm.Model
-	Amount   int    `json:"amount"`
-	Category string `json:"category"`
-	UserID   uint   `json:"user_id"`
+	Amount      int    `json:"amount"`
+	Category    string `json:"category"`
+	UserID      uint   `json:"user_id"`
+	Description string `json:"description`
 }
