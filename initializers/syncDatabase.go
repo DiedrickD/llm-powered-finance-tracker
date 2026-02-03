@@ -4,4 +4,6 @@ import "github.com/DiedrickD/llm-powered-finance-tracker/models"
 
 func SyncDatabase() {
 	DB.AutoMigrate(&models.User{})
+	DB.AutoMigrate(&models.Transaction{})
+	// Todo: add for category later
 }

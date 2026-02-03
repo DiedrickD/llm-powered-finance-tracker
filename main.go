@@ -43,6 +43,10 @@ func main() {
 	mux.HandleFunc("/signup", controllers.Signup)
 	mux.HandleFunc("/login", controllers.Login)
 	mux.HandleFunc("/validate", middleware.RequireAuth(controllers.Validate))
+	mux.HandleFunc("/createTransaction", middleware.RequireAuth(controllers.CreateTransaction))
+	mux.HandleFunc("/readTransaction", middleware.RequireAuth(controllers.ReadTransaction))
+	mux.HandleFunc("/updateTransaction", middleware.RequireAuth(controllers.UpdateTransaction))
+	mux.HandleFunc("/deleteTransaction", middleware.RequireAuth(controllers.DeleteTransaction))
 
 	server := &http.Server{
 		Addr:           ":3000",
