@@ -2,11 +2,13 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/DiedrickD/llm-powered-finance-tracker/initializers"
 	"github.com/DiedrickD/llm-powered-finance-tracker/models"
+	"github.com/DiedrickD/llm-powered-finance-tracker/services"
 )
 
 func CreateTransaction(w http.ResponseWriter, r *http.Request) {
@@ -27,6 +29,7 @@ func CreateTransaction(w http.ResponseWriter, r *http.Request) {
 		Amount      int    `json:"amount"`
 		Category    string `json:"category"`
 		Description string `json:"description"`
+		IsLlmActive bool   `json:"is_llm_active"`
 	}
 
 	err := json.NewDecoder(r.Body).Decode(&body)
@@ -39,6 +42,24 @@ func CreateTransaction(w http.ResponseWriter, r *http.Request) {
 	if body.Amount == 0 {
 		http.Error(w, "Amount cannot be 0", http.StatusBadRequest)
 		return
+	}
+
+	// If true then pass to LLM for auto categorization
+	if body.IsLlmActive == true {
+		fmt.Printf("Masuk funsgi untuk lanjut ke gpt")
+		aiCategory, err := services.GptService(r.Context(), body.Description)
+
+		// If error happens, use Uncategorized, else use the ai category
+		if err != nil {
+			body.Category = "Uncategorized"
+		} else {
+			body.Category = aiCategory
+		}
+	}
+
+	// If category is empty, categorize it as Uncategorized
+	if body.Category == "" {
+		body.Category = "Uncategorized"
 	}
 
 	// Create transaction
@@ -133,17 +154,17 @@ func UpdateTransaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Update value 
+	// Update value
 	if body.Amount != nil {
-    	existingTransaction.Amount = *body.Amount
+		existingTransaction.Amount = *body.Amount
 	}
 
 	if body.Category != nil {
-    	existingTransaction.Category = *body.Category
+		existingTransaction.Category = *body.Category
 	}
 
 	if body.Description != nil {
-    	existingTransaction.Description = *body.Description
+		existingTransaction.Description = *body.Description
 	}
 
 	// Save updated data to database

@@ -1,4 +1,4 @@
-package service
+package services
 
 import (
 	"bytes"
@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strings"
 )
 
 type GptModel struct {
@@ -28,15 +27,20 @@ type GptPromptResponse struct {
 }
 
 var gptModel = GptModel{
-	Url:    "https://api.openai.com/v1/responses",
-	Model:  "gpt-5-nano",
-	ApiKey: os.Getenv("OPEN_AI_KEY"),
+	Url:   "https://api.openai.com/v1/responses",
+	Model: "gpt-5-nano",
 }
 
 func GptService(ctx context.Context, description string) (string, error) {
 	// Check for edge cases
 	if description == "" {
 		return "Uncategorized", errors.New("description is empty")
+	}
+
+	apiKey := os.Getenv("OPEN_AI_KEY")
+	fmt.Println("api keynya:", apiKey) //delet later
+	if apiKey == "" {
+		return "Uncategorized", errors.New("OPEN_AI_KEY is empty")
 	}
 
 	// Create payload and convert to json
@@ -58,7 +62,7 @@ func GptService(ctx context.Context, description string) (string, error) {
 	}
 
 	req.Header.Add("Content-type", "application/json")
-	req.Header.Add("Authorization", "Bearer "+gptModel.ApiKey)
+	req.Header.Add("Authorization", "Bearer "+apiKey)
 
 	// Send the payload
 	client := &http.Client{}
@@ -68,11 +72,13 @@ func GptService(ctx context.Context, description string) (string, error) {
 		return "Uncategorized", err
 	}
 
-	if resp.StatusCode != http.StatusOK {
+	defer resp.Body.Close()
+
+	fmt.Println(resp.StatusCode) //delete
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return "Uncategorized", fmt.Errorf("API error: status code %d", resp.StatusCode)
 	}
-
-	defer resp.Body.Close()
 
 	var result GptPromptResponse
 
@@ -81,11 +87,24 @@ func GptService(ctx context.Context, description string) (string, error) {
 		return "", err
 	}
 
-	if len(result.Output) == 0 || len(result.Output[0].Content) == 0 {
-		return "Uncategorized", errors.New("AI returned an empty response")
+	var generatedCategory string
+	found := false
+
+	// Loop to find output text
+	for _, out := range result.Output {
+		if out.Type == "message" {
+			for _, c := range out.Content {
+				if c.Type == "output_text" {
+					generatedCategory = c.Text
+					found = true
+				}
+			}
+		}
 	}
 
-	generatedCategory := strings.TrimSpace(result.Output[0].Content[0].Text)
+	if !found || generatedCategory == "" {
+		return "Uncategorized", errors.New("AI returned an empty response")
+	}
 
 	// Get and clean the output from GPT response
 	return generatedCategory, nil

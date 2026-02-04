@@ -17,5 +17,5 @@ type Transaction struct {
 	Amount      int    `json:"amount"`
 	Category    string `json:"category"`
 	UserID      uint   `json:"user_id"`
-	Description string `json:"description`
+	Description string `json:"description"`
 }
