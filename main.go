@@ -37,6 +37,8 @@ func main() {
 	initializers.LoadEnvVariables()
 	initializers.ConnectToDB()
 	initializers.SyncDatabase()
+	initializers.SeedCategories()
+	
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", healthHandler)

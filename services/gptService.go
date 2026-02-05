@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
+
 )
 
 type GptModel struct {
@@ -31,23 +33,26 @@ var gptModel = GptModel{
 	Model: "gpt-5-nano",
 }
 
-func GptService(ctx context.Context, description string) (string, error) {
+
+func GptService(ctx context.Context, description string, category []string) (string, error) {
 	// Check for edge cases
 	if description == "" {
 		return "Uncategorized", errors.New("description is empty")
 	}
 
 	apiKey := os.Getenv("OPEN_AI_KEY")
-	fmt.Println("api keynya:", apiKey) //delet later
 	if apiKey == "" {
 		return "Uncategorized", errors.New("OPEN_AI_KEY is empty")
 	}
+
+	// Convert into a list
+	listCategory := strings.Join(category, ", ")
 
 	// Create payload and convert to json
 	payload := map[string]interface{}{
 		"model": gptModel.Model,
 		// Todo : ubah ini menjadi reusable prompt
-		"input": "Categorize this financial statement {" + description + "} in one word",
+		"input": "Categorize this financial statement {" + description + "} in one word choosen from" + listCategory,
 	}
 
 	jsonPayload, err := json.Marshal(payload)
@@ -73,8 +78,6 @@ func GptService(ctx context.Context, description string) (string, error) {
 	}
 
 	defer resp.Body.Close()
-
-	fmt.Println(resp.StatusCode) //delete
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return "Uncategorized", fmt.Errorf("API error: status code %d", resp.StatusCode)

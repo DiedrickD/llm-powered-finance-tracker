@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -44,10 +43,17 @@ func CreateTransaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if body.Description == "" {
+		http.Error(w, "Description cannot be empty", http.StatusBadRequest)
+		return
+	}
+
 	// If true then pass to LLM for auto categorization
 	if body.IsLlmActive == true {
-		fmt.Printf("Masuk funsgi untuk lanjut ke gpt")
-		aiCategory, err := services.GptService(r.Context(), body.Description)
+		// Get category list
+		categoryList := GetCategories(user.ID)
+
+		aiCategory, err := services.GptService(r.Context(), body.Description, categoryList)
 
 		// If error happens, use Uncategorized, else use the ai category
 		if err != nil {
@@ -59,15 +65,22 @@ func CreateTransaction(w http.ResponseWriter, r *http.Request) {
 
 	// If category is empty, categorize it as Uncategorized
 	if body.Category == "" {
-		body.Category = "Uncategorized"
+		body.Category = "Uncategorized"	
+	}
+
+	// Find or create category
+	category, err := FindOrCreateCategory(body.Category, user.ID)
+	if err != nil {
+		http.Error(w, "Failed to process category", http.StatusInternalServerError)
+		return
 	}
 
 	// Create transaction
 	transaction := models.Transaction{
-		Amount:      body.Amount,
-		Category:    body.Category,
+		Amount: body.Amount,
 		UserID:      user.ID,
 		Description: body.Description,
+		Categories:  []models.Category{category},
 	}
 
 	// Put transaction into database
@@ -132,10 +145,10 @@ func UpdateTransaction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var body struct {
-		TransactionID int     `json:"transaction_id"`
-		Amount        *int    `json:"amount"`
-		Category      *string `json:"category"`
-		Description   *string `json:"description"`
+		TransactionID int  `json:"transaction_id"`
+		Amount        *int `json:"amount"`
+		//Category      *string `json:"category"`
+		Description *string `json:"description"`
 	}
 
 	err := json.NewDecoder(r.Body).Decode(&body)
@@ -159,9 +172,9 @@ func UpdateTransaction(w http.ResponseWriter, r *http.Request) {
 		existingTransaction.Amount = *body.Amount
 	}
 
-	if body.Category != nil {
-		existingTransaction.Category = *body.Category
-	}
+	//if body.Category != nil {
+	//	existingTransaction.Category = *body.Category
+	//}
 
 	if body.Description != nil {
 		existingTransaction.Description = *body.Description

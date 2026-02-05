@@ -2,20 +2,18 @@ package models
 
 import "gorm.io/gorm"
 
-/*
 type Category struct {
 	gorm.Model
-	Name string `gorm:"unique"`
+	Name     string `gorm:"not null;uniqueIndex:idx_user_category"`
+	UserID   uint   `gorm:"uniqueIndex:idx_user_category"`
+	ParentID *uint
+	Parent   *Category `gorm:"foreignkey:ParentID"`
 }
-*/
-
-// TODO: Make category unique, flow -> each person can create their own category and
-// LLM will assign based on the user category
 
 type Transaction struct {
 	gorm.Model
-	Amount      int    `json:"amount"`
-	Category    string `json:"category"`
-	UserID      uint   `json:"user_id"`
-	Description string `json:"description"`
+	Amount      int        `json:"amount"`
+	UserID      uint       `json:"user_id"`
+	Description string     `json:"description"`
+	Categories  []Category `gorm:"many2many:transaction_categories;"`
 }
