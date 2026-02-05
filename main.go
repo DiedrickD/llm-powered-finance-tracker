@@ -38,14 +38,18 @@ func main() {
 	initializers.ConnectToDB()
 	initializers.SyncDatabase()
 	initializers.SeedCategories()
-	
 
 	mux := http.NewServeMux()
+
+	// User access
 	mux.HandleFunc("/health", healthHandler)
 	mux.HandleFunc("/signup", controllers.Signup)
 	mux.HandleFunc("/login", controllers.Login)
+	mux.HandleFunc("/logout", controllers.Logout)
 	mux.HandleFunc("/validate", middleware.RequireAuth(controllers.Validate))
-	mux.HandleFunc("/createTransaction", middleware.RequireAuth(controllers.CreateTransaction))
+
+	// Crud for the transaction
+	mux.HandleFunc("/createAutoTransaction", middleware.RequireAuth(controllers.CreateAutoTransaction))
 	mux.HandleFunc("/readTransaction", middleware.RequireAuth(controllers.ReadTransaction))
 	mux.HandleFunc("/updateTransaction", middleware.RequireAuth(controllers.UpdateTransaction))
 	mux.HandleFunc("/deleteTransaction", middleware.RequireAuth(controllers.DeleteTransaction))

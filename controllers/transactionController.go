@@ -10,7 +10,7 @@ import (
 	"github.com/DiedrickD/llm-powered-finance-tracker/services"
 )
 
-func CreateTransaction(w http.ResponseWriter, r *http.Request) {
+func CreateAutoTransaction(w http.ResponseWriter, r *http.Request) {
 	// Check method
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -25,8 +25,6 @@ func CreateTransaction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var body struct {
-		Amount      int    `json:"amount"`
-		Category    string `json:"category"`
 		Description string `json:"description"`
 		IsLlmActive bool   `json:"is_llm_active"`
 	}
@@ -37,39 +35,24 @@ func CreateTransaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Error for amount 0
-	if body.Amount == 0 {
-		http.Error(w, "Amount cannot be 0", http.StatusBadRequest)
-		return
-	}
-
 	if body.Description == "" {
 		http.Error(w, "Description cannot be empty", http.StatusBadRequest)
 		return
 	}
 
+	var aiCategory string
+	var aiAmount int
+
 	// If true then pass to LLM for auto categorization
 	if body.IsLlmActive == true {
 		// Get category list
 		categoryList := GetCategories(user.ID)
+		aiAmount, aiCategory, _ = services.GptService(r.Context(), body.Description, categoryList)
 
-		aiCategory, err := services.GptService(r.Context(), body.Description, categoryList)
-
-		// If error happens, use Uncategorized, else use the ai category
-		if err != nil {
-			body.Category = "Uncategorized"
-		} else {
-			body.Category = aiCategory
-		}
-	}
-
-	// If category is empty, categorize it as Uncategorized
-	if body.Category == "" {
-		body.Category = "Uncategorized"	
 	}
 
 	// Find or create category
-	category, err := FindOrCreateCategory(body.Category, user.ID)
+	category, err := FindOrCreateCategory(aiCategory, user.ID)
 	if err != nil {
 		http.Error(w, "Failed to process category", http.StatusInternalServerError)
 		return
@@ -77,7 +60,7 @@ func CreateTransaction(w http.ResponseWriter, r *http.Request) {
 
 	// Create transaction
 	transaction := models.Transaction{
-		Amount: body.Amount,
+		Amount:      aiAmount,
 		UserID:      user.ID,
 		Description: body.Description,
 		Categories:  []models.Category{category},
