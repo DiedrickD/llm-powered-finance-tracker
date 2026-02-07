@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -26,7 +25,6 @@ func GetCategories(userID uint) []string {
 		listCategory = append(listCategory, val.Name)
 	}
 
-	fmt.Println(listCategory)
 	return listCategory
 }
 
@@ -59,12 +57,14 @@ func FindOrCreateCategory(name string, userID uint) (models.Category, error) {
 func DeleteCategoryByID(categoryID uint, userID uint) error {
 	var category models.Category
 
+	if userID != 0 {
 	err := initializers.DB.
 		Where("id = ? AND user_id = ?", categoryID, userID).
 		First(&category).Error
 
 	if err != nil {
 		return err
+	}
 	}
 
 	return initializers.DB.Delete(&category).Error

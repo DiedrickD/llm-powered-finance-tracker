@@ -22,6 +22,7 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var body struct {
+		Username string `json:"username"`
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
@@ -32,8 +33,41 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if body.Username == "" {
+		http.Error(w, "Username is required", http.StatusBadRequest)
+		return
+	}
+
 	if body.Email == "" || body.Password == "" {
 		http.Error(w, "Email and password required", http.StatusBadRequest)
+		return
+	}
+
+	// Check for existing username
+	var existingUser models.User
+
+	err = initializers.DB.Where("username = ?", body.Username).First(&existingUser).Error
+	if err == nil {
+		http.Error(w, "Username already exists", http.StatusConflict)
+		return
+	}
+
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	// Check for existing email
+	var existingEmail models.User
+
+	err = initializers.DB.Where("email = ?", body.Email).First(&existingEmail).Error
+	if err == nil {
+		http.Error(w, "Email already used!", http.StatusConflict)
+		return
+	}
+
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
@@ -48,13 +82,16 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 
 	// Create User
 	newUser := models.User{
+		Username: body.Username,
 		Email:    body.Email,
 		Password: string(hashedPassword),
+		Currency: "IDR", // Todo: Give option to change later
+		NewUser:  true,
 	}
 
 	result := initializers.DB.Create(&newUser)
 	if result.Error != nil {
-		http.Error(w, "Failed to create user", http.StatusConflict)
+		http.Error(w, "Username or email already exists", http.StatusConflict)
 		return
 	}
 
