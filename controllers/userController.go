@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/DiedrickD/llm-powered-finance-tracker/initializers"
@@ -215,5 +216,51 @@ func Validate(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{
 		"message": "I'm logged in",
 		"user":    user.Email,
+	})
+}
+
+func UpdateCurrency(w http.ResponseWriter, r *http.Request) {
+	// Method check
+	if r.Method != http.MethodPost && r.Method != http.MethodPut {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	user, ok := r.Context().Value("user").(models.User)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var body struct {
+		Currency string `json:"currency"`
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		http.Error(w, "Invalid Request Body", http.StatusBadRequest)
+		return
+	}
+
+	if len(body.Currency) != 3 {
+		http.Error(w, "Currency must be a 3-letter code (e.g., IDR, USD)", http.StatusBadRequest)
+		return
+	}
+	// Todo : check for the money type or list it maybe??
+
+	newCurrency := strings.ToUpper(body.Currency)
+
+	result := initializers.DB.Model(&user).Update("currency", newCurrency)
+
+	if result.Error != nil {
+		http.Error(w, "Failed to update currency", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"message":  "Currency updated successfully",
+		"currency": newCurrency,
 	})
 }
