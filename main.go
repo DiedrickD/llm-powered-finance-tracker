@@ -47,6 +47,7 @@ func main() {
 	mux.HandleFunc("/login", controllers.Login)
 	mux.HandleFunc("/logout", controllers.Logout)
 	mux.HandleFunc("/validate", middleware.RequireAuth(controllers.Validate))
+	mux.HandleFunc("/updateCurrency", middleware.RequireAuth(controllers.UpdateCurrency))
 
 	// Crud for the transaction
 	mux.HandleFunc("/createAutoTransaction", middleware.RequireAuth(controllers.CreateAutoTransaction))
