@@ -264,3 +264,101 @@ func UpdateCurrency(w http.ResponseWriter, r *http.Request) {
 		"currency": newCurrency,
 	})
 }
+
+func FirstBalanceInput(w http.ResponseWriter, r *http.Request) {
+	// Method check
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Get user from context (auth middleware)
+	user, ok := r.Context().Value("user").(models.User)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Only allowed once
+	if !user.NewUser {
+		http.Error(w, "Initial balance already set", http.StatusBadRequest)
+		return
+	}
+
+	var body struct {
+		Balance int `json:"balance"`
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if body.Balance < 0 {
+		http.Error(w, "Balance cannot be negative", http.StatusBadRequest)
+		return
+	}
+
+	// Update balance & mark user as not new
+	result := initializers.DB.Model(&user).Updates(map[string]interface{}{
+		"balance":  body.Balance,
+	})
+
+	if result.Error != nil {
+		http.Error(w, "Failed to set initial balance", http.StatusInternalServerError)
+		return
+	}
+
+	// Response
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "Initial balance set successfully",
+		"balance": body.Balance,
+	})
+}
+
+func ChangeBalance(w http.ResponseWriter, r *http.Request) {
+	// Method check
+	if r.Method != http.MethodPost && r.Method != http.MethodPut {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Get user from context
+	user, ok := r.Context().Value("user").(models.User)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var body struct {
+		Balance int `json:"balance"`
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if body.Balance < 0 {
+		http.Error(w, "Balance cannot be negative", http.StatusBadRequest)
+		return
+	}
+
+	// Update balance
+	result := initializers.DB.Model(&user).Update("balance", body.Balance)
+	if result.Error != nil {
+		http.Error(w, "Failed to update balance", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "Balance updated successfully",
+		"balance": body.Balance,
+	})
+}
